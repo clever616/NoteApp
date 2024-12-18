@@ -1,0 +1,59 @@
+services:
+  backend:
+    build:
+      context: ./backend
+    container_name: notes_backend
+    ports:
+      - "8000:8000"
+    environment:
+      MYSQL_DATABASE: notes_db
+      MYSQL_USER: root
+      MYSQL_PASSWORD:
+      MYSQL_HOST: 127.0.0.1
+      MYSQL_PORT: 3306
+    volumes:
+      - ./backend/media:/app/media
+    networks:
+      - default
+    depends_on:
+      db:
+        condition: service_healthy
+    command: >
+      sh -c "python manage.py makemigrations &&
+             python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+
+  db:
+    image: mysql:8.0
+    container_name: db
+    environment:
+      MYSQL_DATABASE: notes_db
+      MYSQL_USER: root
+      MYSQL_PASSWORD:
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    volumes:
+      - db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    networks:
+      - default
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: notes_frontend
+    ports:
+      - "3000:80"
+    networks:
+      - default
+
+volumes:
+  db_data:
+
+networks:
+  default:
+    driver: bridge
